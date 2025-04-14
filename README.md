@@ -1,1 +1,1 @@
-### Neural Style Transfer and Image Generation to apply Polaroid picture effects.
+### Unpaired Image-to-Image Translation using CycleGAN with Modified Loss for Monet Style Transfer
