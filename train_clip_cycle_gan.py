@@ -12,15 +12,25 @@ def train(args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Using device: {device}")
 
+    # just in case the job abruptly stops, we can reload most recent checkpoint
+    run_name = f"run_{args.load_epoch}_resume" if args.load_epoch > 0 else "run_fresh"
+
     try:
         wandb.init(
-            project="CLIP_CycleGAN",
-            entity="szinja-university-of-rochester"
+            project=args.wandb_project,
+            entity=args.wandb_entity,
+            name=run_name,
+            config={
+                "learning_rate": args.lr,
+                "batch_size": args.batch_size,
+                "img_size": args.img_size,
+                "n_res_blocks": args.n_res_blocks,
+                "lambda_cycle": args.lambda_cycle,
+                "lambda_identity": args.lambda_identity,
+                "lambda_clip": args.lambda_clip,
+                "resume_epoch": args.load_epoch
+            }
         )
-        wandb.config.update({
-            "learning_rate": 0.0002,
-            "batch_size": 64
-        })
     except Exception as e:
         print(f"Could not initialize Wandb: {e}. Training without logging.")
         wandb.init(mode="disabled") # in case we train without Wandb
@@ -59,18 +69,21 @@ def train(args):
 
     # Local checkpoint
     if args.load_epoch > 0:
+        checkpoint_path = os.path.join(args.checkpoint_dir, f"checkpoint_epoch_{args.load_epoch}.pth")
         try:
-            print(f"Loading models from epoch {args.load_epoch}...")
-            G_A2B.load_state_dict(torch.load(os.path.join(args.checkpoint_dir, f"G_A2B_epoch_{args.load_epoch}.pth"), map_location=device))
-            G_B2A.load_state_dict(torch.load(os.path.join(args.checkpoint_dir, f"G_B2A_epoch_{args.load_epoch}.pth"), map_location=device))
-            print("Models loaded successfully.")
+            print(f"Loading checkpoint from epoch {args.load_epoch}...")
+            checkpoint = torch.load(checkpoint_path, map_location=device)
+            # loading models and optimizer from checkpoint
+            G_A2B.load_state_dict(checkpoint['G_A2B_state_dict'])
+            G_B2A.load_state_dict(checkpoint['G_B2A_state_dict'])
+            optimizer_G.load_state_dict(checkpoint['optimizer_G_state_dict'])
+            print(f"Checkpoint loaded successfully from {checkpoint_path}")
         except FileNotFoundError:
-            print(f"Warning: Checkpoint files for epoch {args.load_epoch} not found. Starting from scratch.")
-            args.load_epoch = 0 # reset load_epoch if we cannot find the files
-        except Exception as e:
-            print(f"Error loading checkpoints: {e}. Starting from scratch.")
+            print(f"Warning: Checkpoint not found at {checkpoint_path}. Starting from scratch.")
             args.load_epoch = 0
-
+        except Exception as e:
+            print(f"Error loading checkpoint: {e}. Starting from scratch.")
+            args.load_epoch = 0
 
     loss_fn = ModifiedCycleGANLoss(
         lambda_cycle=args.lambda_cycle,
@@ -177,8 +190,13 @@ def train(args):
         # Another checkpoint
         if epoch % args.checkpoint_interval == 0 or epoch == args.epochs:
             print(f"Saving models at epoch {epoch}...")
-            torch.save(G_A2B.state_dict(), os.path.join(args.checkpoint_dir, f"G_A2B_epoch_{epoch}.pth"))
-            torch.save(G_B2A.state_dict(), os.path.join(args.checkpoint_dir, f"G_B2A_epoch_{epoch}.pth"))
+            # Save complete training state, including optimizer state
+            torch.save({
+                'epoch': epoch,
+                'G_A2B_state_dict': G_A2B.state_dict(),
+                'G_B2A_state_dict': G_B2A.state_dict(),
+                'optimizer_G_state_dict': optimizer_G.state_dict()
+            }, os.path.join(args.checkpoint_dir, f"checkpoint_epoch_{epoch}.pth"))
             print("Models saved.")
 
     print("Training finished.")

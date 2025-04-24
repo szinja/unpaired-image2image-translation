@@ -27,7 +27,7 @@ class Monet2PhotoDataset(Dataset):
             img = self.transform(img)
         return img
 
-def get_dataloaders(root_dir, batch_size, resize, num_workers=4, pin_memory=True):
+def get_dataloaders(root_dir, batch_size, resize, num_workers=2, pin_memory=True): # recommended num_workers is 2
     transform = transforms.Compose([
         transforms.Resize(resize),
         transforms.ToTensor(),
