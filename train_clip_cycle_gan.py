@@ -69,20 +69,19 @@ def train(args):
 
     # Local checkpoint
     if args.load_epoch > 0:
-        checkpoint_path = os.path.join(args.checkpoint_dir, f"checkpoint_epoch_{args.load_epoch}.pth")
         try:
             print(f"Loading checkpoint from epoch {args.load_epoch}...")
-            checkpoint = torch.load(checkpoint_path, map_location=device)
+            checkpoint = torch.load(args.checkpoint_dir, map_location=device)
             # loading models and optimizer from checkpoint
-            G_A2B.load_state_dict(checkpoint['G_A2B_state_dict'])
-            G_B2A.load_state_dict(checkpoint['G_B2A_state_dict'])
+            G_A2B.load_state_dict(torch.load(os.path.join(args.checkpoint_dir, f"G_A2B_epoch_{args.load_epoch}.pth"), map_location=device))
+            G_B2A.load_state_dict(torch.load(os.path.join(args.checkpoint_dir, f"G_B2A_epoch_{args.load_epoch}.pth"), map_location=device))
             optimizer_G.load_state_dict(checkpoint['optimizer_G_state_dict'])
-            print(f"Checkpoint loaded successfully from {checkpoint_path}")
+            print(f"Models loaded successfully.")
         except FileNotFoundError:
-            print(f"Warning: Checkpoint not found at {checkpoint_path}. Starting from scratch.")
+            print(f"Warning: One or both checkpoint files for epoch {args.load_epoch} not found. Starting from scratch.")
             args.load_epoch = 0
         except Exception as e:
-            print(f"Error loading checkpoint: {e}. Starting from scratch.")
+            print(f"Error loading model checkpoint: {e}. Starting from scratch.")
             args.load_epoch = 0
 
     loss_fn = ModifiedCycleGANLoss(
