@@ -71,17 +71,22 @@ def train(args):
     if args.load_epoch > 0:
         try:
             print(f"Loading checkpoint from epoch {args.load_epoch}...")
-            # loading models and optimizer from checkpoint
-            checkpoint_path = os.path.join(args.checkpoint_dir, f"checkpoint_epoch_{args.load_epoch}.pth")
-            checkpoint = torch.load(checkpoint_path, map_location=device)
-
-            G_A2B.load_state_dict(checkpoint['G_A2B_state_dict'])
-            G_B2A.load_state_dict(checkpoint['G_B2A_state_dict'])
-            optimizer_G.load_state_dict(checkpoint['optimizer_G_state_dict'])
-            print("Models and optimizer loaded successfully.")
-        except FileNotFoundError:
-            print(f"Warning: One or both checkpoint files for epoch {args.load_epoch} not found. Starting from scratch.")
-            args.load_epoch = 0
+            # Define the paths for the model checkpoints
+            G_A2B_path = os.path.join(args.checkpoint_dir, f"G_A2B_epoch_{args.load_epoch}.pth")
+            G_B2A_path = os.path.join(args.checkpoint_dir, f"G_B2A_epoch_{args.load_epoch}.pth")
+            # Check if the checkpoint files exist
+            if os.path.exists(G_A2B_path) and os.path.exists(G_B2A_path):
+                # Load the model weights
+                G_A2B.load_state_dict(torch.load(G_A2B_path, map_location=device))
+                G_B2A.load_state_dict(torch.load(G_B2A_path, map_location=device))
+                # Load optimizer state if available
+                checkpoint_path = os.path.join(args.checkpoint_dir, f"checkpoint_epoch_{args.load_epoch}.pth")
+                if os.path.exists(checkpoint_path):
+                    checkpoint = torch.load(checkpoint_path, map_location=device)
+                    optimizer_G.load_state_dict(checkpoint['optimizer_G_state_dict'])
+                print(f"Models loaded successfully from epoch {args.load_epoch}.")
+            else:
+                raise FileNotFoundError(f"Checkpoint files not found: {G_A2B_path} or {G_B2A_path}")
         except Exception as e:
             print(f"Error loading model checkpoint: {e}. Starting from scratch.")
             args.load_epoch = 0
