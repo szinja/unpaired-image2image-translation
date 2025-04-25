@@ -71,12 +71,14 @@ def train(args):
     if args.load_epoch > 0:
         try:
             print(f"Loading checkpoint from epoch {args.load_epoch}...")
-            checkpoint = torch.load(args.checkpoint_dir, map_location=device)
             # loading models and optimizer from checkpoint
-            G_A2B.load_state_dict(torch.load(os.path.join(args.checkpoint_dir, f"G_A2B_epoch_{args.load_epoch}.pth"), map_location=device))
-            G_B2A.load_state_dict(torch.load(os.path.join(args.checkpoint_dir, f"G_B2A_epoch_{args.load_epoch}.pth"), map_location=device))
+            checkpoint_path = os.path.join(args.checkpoint_dir, f"checkpoint_epoch_{args.load_epoch}.pth")
+            checkpoint = torch.load(checkpoint_path, map_location=device)
+
+            G_A2B.load_state_dict(checkpoint['G_A2B_state_dict'])
+            G_B2A.load_state_dict(checkpoint['G_B2A_state_dict'])
             optimizer_G.load_state_dict(checkpoint['optimizer_G_state_dict'])
-            print(f"Models loaded successfully.")
+            print("Models and optimizer loaded successfully.")
         except FileNotFoundError:
             print(f"Warning: One or both checkpoint files for epoch {args.load_epoch} not found. Starting from scratch.")
             args.load_epoch = 0
