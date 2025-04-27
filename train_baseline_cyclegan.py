@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 import wandb
 from models.generator import Generator
-from discriminator import Discriminator
+from models.discriminator import Discriminator
 from data.monet2photo_dataset import Monet2PhotoDataset
 
 # Training a simple baseline CycleGAN to compare our CLIP-enhanced model
